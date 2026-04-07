@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { jobsApi } from "../api/jobs.api.ts";
 import { cn } from "../lib/utils.ts";
-import { ExternalLink, Trash2, ChevronUp, ChevronDown, Briefcase } from "lucide-react";
+import { ExternalLink, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import { relativeDate, shortDate } from "../lib/dates.ts";
 import { StatusBadge } from "../components/ui/StatusBadge.tsx";
@@ -14,6 +14,7 @@ import { SkeletonRow } from "../components/ui/Skeleton.tsx";
 import { JOB_STATUSES } from "@jobsearch/shared";
 
 const ALL_STATUSES = JOB_STATUSES;
+const PAGE_SIZE = 50;
 
 type SortKey = "title" | "employer" | "status" | "resumeUsed" | "foundVia" | "appliedAt";
 type SortDir = "asc" | "desc";
@@ -26,7 +27,13 @@ export function Applications() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [statusDropdownId, setStatusDropdownId] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Reset to first page whenever filters change
+  useEffect(() => {
+    setPage(0);
+  }, [statusFilter, search]);
 
   const queryClient = useQueryClient();
 
@@ -97,7 +104,12 @@ export function Applications() {
     if (confirm(`Delete "${title}"?`)) deleteMutation.mutate(id);
   };
 
-  const params: Record<string, string> = { limit: "50", sortBy: "createdAt", sortDir: "desc" };
+  const params: Record<string, string> = {
+    limit: String(PAGE_SIZE),
+    offset: String(page * PAGE_SIZE),
+    sortBy: "createdAt",
+    sortDir: "desc",
+  };
   if (statusFilter && statusFilter !== "all") {
     params.status = statusFilter;
   } else if (!statusFilter) {
@@ -105,10 +117,13 @@ export function Applications() {
   }
   if (search) params.search = search;
 
-  const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["jobs", "list", statusFilter, search],
+  const { data: result, isLoading } = useQuery({
+    queryKey: ["jobs", "list", statusFilter, search, page],
     queryFn: () => jobsApi.list(params),
   });
+  const jobs = result?.data ?? [];
+  const total = result?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   // Client-side sort
   const sortedJobs = [...jobs].sort((a: any, b: any) => {
@@ -170,7 +185,7 @@ export function Applications() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Applications ({jobs.length})</h2>
+        <h2 className="text-xl font-bold">Applications ({total})</h2>
         <button
           onClick={() => navigate("/add")}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
@@ -324,6 +339,36 @@ export function Applications() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-3 text-sm text-gray-600 dark:text-gray-400">
+              <div>
+                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span>
+                  Page {page + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="p-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Floating bulk action bar */}
           {selected.size > 0 && (

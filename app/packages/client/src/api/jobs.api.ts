@@ -1,9 +1,12 @@
 import { apiFetch, apiPost, apiPatch } from "./client.ts";
 
 export const jobsApi = {
-  list: (params?: Record<string, string>) => {
+  list: async (params?: Record<string, string>): Promise<{ data: any[]; total: number }> => {
     const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-    return apiFetch<any[]>(`/jobs${qs}`);
+    const res = await fetch(`/api/jobs${qs}`, { headers: { "Content-Type": "application/json" } });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error?.message || "API error");
+    return { data: json.data, total: json.meta?.total ?? json.data.length };
   },
   getById: (id: number) => apiFetch<any>(`/jobs/${id}`),
   create: (data: any) => apiPost<any>("/jobs", data),
