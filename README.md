@@ -45,18 +45,26 @@ npm install
 cp .env.example .env
 npx tsx packages/server/src/db/migrate.ts
 npm run dev
-# → http://localhost:62279
+# → http://localhost:44455
 ```
 
-Six pages: Dashboard, Add Application, Applications list, Application Detail (with Notes + Salary/Offer tabs), Analytics (charts including a calendar heatmap), Settings. All data lives in a local SQLite file at `app/data/jobsearch.db` — nothing leaves your machine, no accounts, no telemetry, no cloud.
+Or with Docker: `docker compose up --build` and open http://localhost:44455.
 
-### Screenshots
+**Two views, one page.** Switch between a sortable/searchable list and a Kanban board with drag-and-drop status changes — the URL persists the view (`?view=board`) so it survives reload. Cards on the board show a "days in stage" badge that turns yellow at 7 days and red at 14 so stalled applications stand out.
+
+![Board view](docs/screenshots/board.png)
+
+**The whole feature set:** Dashboard with KPIs and a weekly applications chart, paginated Applications list with filter/search/sort/bulk-archive, drag-and-drop Kanban board, Application Detail with timeline + Notes + Salary/Offer tabs, Add Application with URL scraping, Analytics (funnel, velocity, source performance, resume effectiveness, calendar heatmap), Settings — including **user-configurable resume variants** so the categories you pick from match the resumes you actually have.
+
+All data lives in a local SQLite file at `app/data/jobsearch.db`. Nothing leaves your machine. No accounts, no telemetry, no cloud, no SaaS lock-in.
+
+### More screenshots
 
 | | |
 |---|---|
-| **Applications list** — sortable, searchable, filterable. | **Application detail** — timeline, status moves, notes, salary/offer tabs. |
+| **Applications list** — sortable, searchable, paginated, bulk archive. | **Application detail** — timeline, status moves, notes, salary/offer tabs. |
 | ![Applications](docs/screenshots/applications.png) | ![Application detail](docs/screenshots/detail.png) |
-| **Add Application** — paste a URL, scrape, fill, submit. | **Analytics** — funnel, velocity, source performance, response/interview rates. |
+| **Add Application** — paste a URL, scrape, fill, submit. | **Analytics** — funnel, weekly velocity, source performance, resume effectiveness. |
 | ![Add Application](docs/screenshots/add.png) | ![Analytics](docs/screenshots/analytics.png) |
 
 **You don't need the resume system to use this.** If you generate resumes some other way and just want a clean tracker that doesn't lock your data into a SaaS, that's fine. Skip `resume/` entirely.

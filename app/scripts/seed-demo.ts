@@ -90,6 +90,58 @@ async function main() {
   await client.execute("DELETE FROM jobs");
   await client.execute("DELETE FROM sqlite_sequence WHERE name IN ('jobs','stage_events')");
 
+  // Showcase job at id=1: a fully-fleshed-out application that walked
+  // through the pipeline. Used as the target of the README detail screenshot
+  // so the detail page actually shows what the app can do (timeline, notes,
+  // salary band, talking points, follow-up date) rather than an empty shell.
+  console.log("Inserting showcase job at id=1...");
+  const showcaseAppliedAt = new Date(Date.now() - 21 * 86400000); // 21d ago
+  const showcaseUpdatedAt = new Date(Date.now() - 2 * 86400000); // 2d ago
+  await client.execute({
+    sql: `INSERT INTO jobs (
+      id, title, employer, job_url, location, remote, status,
+      resume_used, found_via,
+      salary_min, salary_max, salary_currency,
+      company_notes, talking_points, questions_to_ask, interview_notes,
+      follow_up_date, follow_up_done,
+      applied_at, created_at, updated_at
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      "Staff Software Engineer, Distributed Systems",
+      "Datadog",
+      "https://datadoghq.com/careers/staff-distributed-systems",
+      "New York, NY",
+      0,
+      "onsite",
+      "lead",
+      "referral",
+      220000, 280000, "USD",
+      "Datadog is hiring aggressively for distributed systems / observability. The team owns the metrics ingestion pipeline at multi-petabyte scale. Heard the org is well-funded and shipping fast.",
+      "- Led a 4-engineer team that cut p99 ingestion latency by 40% on a similar pipeline\n- Built a write-ahead-log replacement that handled 2M writes/sec sustained\n- Mentored two engineers from mid to senior in 18 months",
+      "- What does on-call rotation look like for the metrics team?\n- How do you balance new product work vs. paying down infra debt?\n- Where does the team feel most under-resourced today?\n- What's the path from Staff to Principal here?",
+      "Phone screen with hiring manager went well — she focused on team-building and mentorship more than systems design. Technical loop next week: 1 system design, 2 coding, 1 behavioral with director.",
+      new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10),
+      0,
+      showcaseAppliedAt.toISOString(),
+      showcaseAppliedAt.toISOString(),
+      showcaseUpdatedAt.toISOString(),
+    ],
+  });
+
+  // Backdated stage events that show a realistic walk through the pipeline
+  const stages: Array<[string, number]> = [
+    ["applied", 21],
+    ["screening", 14],
+    ["technical", 7],
+    ["onsite", 2],
+  ];
+  for (const [stage, daysAgo] of stages) {
+    await client.execute({
+      sql: `INSERT INTO stage_events (job_id, stage, outcome, actor, created_at) VALUES (?, ?, ?, ?, ?)`,
+      args: [1, stage, "passed", "user", new Date(Date.now() - daysAgo * 86400000).toISOString()],
+    });
+  }
+
   const TARGET = 260;
   console.log(`Inserting ${TARGET} backdated jobs...`);
 
