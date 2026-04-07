@@ -1,0 +1,20 @@
+{
+  "name": "jobsearch",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "build": "npm run build --workspaces --if-present",
+    "seed": "tsx scripts/seed.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "tsx packages/server/src/db/migrate.ts"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

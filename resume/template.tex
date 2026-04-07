@@ -1,0 +1,82 @@
+%-------------------------
+% Example resume — Senior Backend Engineer category
+%
+% Copy this file, rename to match the category you want
+% (e.g. `backend.tex`, `frontend.tex`, `ai.tex`, `lead.tex`),
+% edit the content, run `./build.sh`.
+%
+% The only hard rule: this must fit on exactly one page after you
+% edit it. The build script will fail loudly if it doesn't.
+%-------------------------
+
+\documentclass[tightlayout]{resume}
+\begin{document}
+
+\resumeHeader{Jane Doe}{%
+  +1 555 123 4567 \textbar{}
+  \href{mailto:jane@example.com}{jane@example.com} \textbar{}
+  \href{https://linkedin.com/in/janedoe}{LinkedIn} \textbar{}
+  \href{https://github.com/janedoe}{GitHub} \textbar{}
+  \href{https://janedoe.dev}{janedoe.dev}
+}{Open to Remote, US \textbar{} Available immediately}
+
+\resumeSummary{Senior backend engineer with 6 years shipping distributed systems in Go and Python. Led a team of 4 rebuilding a payments pipeline that now processes \$20M/month with 99.99\% uptime. Recent work includes a zero-downtime REST-to-gRPC migration and an internal developer platform adopted by 8 teams.}
+
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Backend}{: Go, Python, FastAPI, gRPC, REST APIs, PostgreSQL, Redis, Kafka, protobuf} \\
+     \textbf{Cloud \& DevOps}{: AWS (ECS, RDS, S3, Lambda), Docker, Kubernetes, Terraform, GitHub Actions} \\
+     \textbf{Observability}{: Prometheus, Grafana, OpenTelemetry, Datadog, structured logging} \\
+     \textbf{Testing}{: pytest, go test, testcontainers, k6 load testing}
+    }}
+ \end{itemize}
+
+\section{Experience}
+  \resumeSubHeadingListStart
+
+    \resumeSubheading
+      {Senior Backend Engineer}{Jan 2023 -- Present}
+      {Acme Payments --- \$20M/month payment processor, 40 countries}{Remote}
+      \resumeItemListStart
+        \resumeItem{Led a team of 4 rebuilding the payments pipeline from a Python monolith to 6 Go microservices with gRPC; delivered zero-downtime cutover and a 3x reduction in p99 latency}
+        \resumeItem{Designed an idempotency layer that eliminated duplicate charges during retry storms, saving an estimated \$150K/year in refunded transactions}
+        \resumeItem{Built an internal developer platform (service scaffolding, deploy pipelines, observability defaults) that cut new-service onboarding from 2 weeks to 2 days across 8 teams}
+        \resumeItem{Drove team test coverage from 34\% to 87\% and introduced integration testing via testcontainers; regressions dropped to near-zero across 18 releases}
+      \resumeItemListEnd
+
+    \resumeSubheading
+      {Backend Engineer}{June 2020 -- Jan 2023}
+      {Acme Payments}{San Francisco, CA}
+      \resumeItemListStart
+        \resumeItem{Owned the fraud detection service: rewrote the rule engine, cut false positives by 40\%, integrated three external risk-scoring APIs}
+        \resumeItem{Built the async job processing system (Python, Celery, Redis) that handles 2M jobs/day at peak}
+      \resumeItemListEnd
+
+  \resumeSubHeadingListEnd
+
+\section{Projects}
+    \resumeSubHeadingListStart
+
+      \resumeProjectHeading
+          {\textbf{OpenLedger} \textbar{} \emph{Go, PostgreSQL, gRPC, Docker}}{2025}
+          \resumeItemListStart
+            \resumeItem{Self-hosted double-entry accounting service: immutable transaction log, real-time balance queries, REST + gRPC APIs, 420 tests across unit and integration layers}
+          \resumeItemListEnd
+
+      \resumeProjectHeading
+          {\textbf{tfdrift} \textbar{} \emph{Go, Terraform, GitHub Actions}}{2024}
+          \resumeItemListStart
+            \resumeItem{CLI that diffs live AWS state against a Terraform configuration and posts drift reports as PR comments}
+          \resumeItemListEnd
+
+    \resumeSubHeadingListEnd
+
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {State University}{City, State}
+      {B.S. Computer Science}{Graduated 2020}
+  \resumeSubHeadingListEnd
+
+\end{document}

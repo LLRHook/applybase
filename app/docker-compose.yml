@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "44455:44455"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=44455
+      - DATABASE_PATH=/app/data/jobsearch.db
+    env_file: .env
+    restart: unless-stopped

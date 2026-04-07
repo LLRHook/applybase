@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100;
+}
+
+/* ── Analytics heatmap ── */
+.analytics-heatmap .react-calendar-heatmap text {
+  font-size: 8px;
+  fill: #9ca3af;
+}
+.analytics-heatmap .react-calendar-heatmap rect {
+  rx: 2;
+}
+
+/* Light mode */
+.analytics-heatmap .hm-empty { fill: #e5e7eb; }
+.analytics-heatmap .hm-1 { fill: #93c5fd; }
+.analytics-heatmap .hm-2 { fill: #3b82f6; }
+.analytics-heatmap .hm-3 { fill: #2563eb; }
+.analytics-heatmap .hm-4 { fill: #1d4ed8; }
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .analytics-heatmap .hm-empty { fill: #1e293b; }
+  .analytics-heatmap .hm-1 { fill: #1e3a5f; }
+  .analytics-heatmap .hm-2 { fill: #2563eb; }
+  .analytics-heatmap .hm-3 { fill: #3b82f6; }
+  .analytics-heatmap .hm-4 { fill: #60a5fa; }
+}
+.dark .analytics-heatmap .hm-empty { fill: #1e293b; }
+.dark .analytics-heatmap .hm-1 { fill: #1e3a5f; }
+.dark .analytics-heatmap .hm-2 { fill: #2563eb; }
+.dark .analytics-heatmap .hm-3 { fill: #3b82f6; }
+.dark .analytics-heatmap .hm-4 { fill: #60a5fa; }

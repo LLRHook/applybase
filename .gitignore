@@ -1,0 +1,40 @@
+# ─── LaTeX build artifacts (resume/) ─────────────────────────
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+texput.log
+
+# Compiled PDFs — build locally, don't commit (your resume is not the repo's business)
+*.pdf
+
+# ─── Node / Vite / Drizzle build output (app/) ───────────────
+node_modules/
+dist/
+build/
+.cache/
+.vite/
+
+# Local databases and runtime data
+app/data/*.db
+app/data/*.db-journal
+app/data/screenshots/
+
+# Environment files (templates are committed via .env.example)
+.env
+.env.local
+.env.*.local
+
+# ─── OS + editor cruft ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+*.swp
+*~
+
+# Local screenshot helper with hardcoded paths
+docs/shoot.mjs
