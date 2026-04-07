@@ -11,14 +11,18 @@ export const JOB_STATUSES = [
 ] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
-export const RESUME_VARIANTS = [
+// Default resume variants used when the user hasn't customized the list.
+// The actual list of available variants is stored in the settings table
+// (key: resume_variants, value: JSON-encoded string[]) and is fully editable
+// from the Settings page.
+export const DEFAULT_RESUME_VARIANTS = [
   "backend",
   "fullstack",
   "lead",
   "ai-integration",
-  "custom",
 ] as const;
-export type ResumeVariant = (typeof RESUME_VARIANTS)[number];
+// Resume variant is now an arbitrary user-defined string, no longer an enum.
+export type ResumeVariant = string;
 
 export const FOUND_VIA_SOURCES = [
   "linkedin",

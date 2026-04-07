@@ -10,18 +10,15 @@ import { StatusBadge } from "../components/ui/StatusBadge.tsx";
 import { ResumeBadge } from "../components/ui/ResumeBadge.tsx";
 import { CompanyLogo } from "../components/ui/CompanyLogo.tsx";
 import { SkeletonCard } from "../components/ui/Skeleton.tsx";
-import { JOB_STATUSES, RESUME_VARIANTS, FOUND_VIA_SOURCES, SOURCE_LABELS, SALARY_CURRENCIES } from "@jobsearch/shared";
+import { JOB_STATUSES, FOUND_VIA_SOURCES, SOURCE_LABELS, SALARY_CURRENCIES } from "@jobsearch/shared";
+import { apiFetch } from "../api/client.ts";
+import { parseResumeVariants, formatResumeLabel } from "../lib/resume-variants.ts";
 
 const TRANSITIONS: Record<string, string[]> = Object.fromEntries(
   JOB_STATUSES.map((s) => [s, JOB_STATUSES.filter((t) => t !== s)]),
 );
 
 const TABS = ["Overview", "Notes", "Salary / Offer"];
-
-const RESUME_OPTIONS = [
-  { value: "", label: "None" },
-  ...RESUME_VARIANTS.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1).replace("-", " ") })),
-];
 
 const SOURCE_OPTIONS = [
   { value: "", label: "None" },
@@ -33,6 +30,16 @@ export function ApplicationDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("Overview");
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => apiFetch<Record<string, string>>("/settings"),
+  });
+  const resumeVariants = parseResumeVariants(settings);
+  const RESUME_OPTIONS = [
+    { value: "", label: "None" },
+    ...resumeVariants.map((v) => ({ value: v, label: formatResumeLabel(v) })),
+  ];
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", employer: "", jobUrl: "", location: "", resumeUsed: "", foundVia: "" });
@@ -168,6 +175,12 @@ export function ApplicationDetail() {
                 {RESUME_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
+                {/* Preserve a value that was removed from settings so editing doesn't silently drop it */}
+                {editForm.resumeUsed && !resumeVariants.includes(editForm.resumeUsed) && (
+                  <option value={editForm.resumeUsed}>
+                    {formatResumeLabel(editForm.resumeUsed)} (removed)
+                  </option>
+                )}
               </select>
             </div>
             <div>

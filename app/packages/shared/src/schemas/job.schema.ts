@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { JOB_STATUSES, RESUME_VARIANTS, FOUND_VIA_SOURCES, SALARY_CURRENCIES } from "../types/job.js";
+import { JOB_STATUSES, FOUND_VIA_SOURCES, SALARY_CURRENCIES } from "../types/job.js";
 
 export const createJobInputSchema = z.object({
   title: z.string().min(1),
@@ -9,7 +9,7 @@ export const createJobInputSchema = z.object({
   salary: z.string().optional(),
   jobDescription: z.string().optional(),
   remote: z.boolean().optional(),
-  resumeUsed: z.enum(RESUME_VARIANTS).optional(),
+  resumeUsed: z.string().min(1).optional(),
   foundVia: z.enum(FOUND_VIA_SOURCES).optional(),
   salaryMin: z.number().optional(),
   salaryMax: z.number().optional(),
@@ -28,7 +28,7 @@ export const jobFiltersSchema = z.object({
   ),
   resumeUsed: z.preprocess(
     (v) => (typeof v === "string" ? v.split(",") : v),
-    z.array(z.enum(RESUME_VARIANTS)).optional(),
+    z.array(z.string().min(1)).optional(),
   ),
   search: z.string().optional(),
   offset: z.coerce.number().min(0).default(0),
@@ -48,7 +48,7 @@ export const updateJobSchema = z.object({
   salary: z.string().nullable().optional(),
   jobDescription: z.string().nullable().optional(),
   remote: z.boolean().optional(),
-  resumeUsed: z.enum(RESUME_VARIANTS).nullable().optional(),
+  resumeUsed: z.string().min(1).nullable().optional(),
   foundVia: z.enum(FOUND_VIA_SOURCES).nullable().optional(),
   salaryMin: z.number().nullable().optional(),
   salaryMax: z.number().nullable().optional(),

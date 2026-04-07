@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { jobsApi } from "../api/jobs.api.ts";
+import { apiFetch } from "../api/client.ts";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CompanyLogo } from "../components/ui/CompanyLogo.tsx";
-import { RESUME_VARIANTS, FOUND_VIA_SOURCES, SOURCE_LABELS, SALARY_CURRENCIES } from "@jobsearch/shared";
-
-const RESUME_OPTIONS = [
-  { value: "", label: "Select resume..." },
-  ...RESUME_VARIANTS.map((v) => ({ value: v, label: v.charAt(0).toUpperCase() + v.slice(1).replace("-", " ") })),
-];
+import { FOUND_VIA_SOURCES, SOURCE_LABELS, SALARY_CURRENCIES } from "@jobsearch/shared";
+import { parseResumeVariants, formatResumeLabel } from "../lib/resume-variants.ts";
 
 const SOURCE_OPTIONS = [
   { value: "", label: "Where did you find this?" },
@@ -20,6 +17,16 @@ const SOURCE_OPTIONS = [
 export function AddApplication() {
   const navigate = useNavigate();
   const [url, setUrl] = useState("");
+
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => apiFetch<Record<string, string>>("/settings"),
+  });
+  const resumeVariants = parseResumeVariants(settings);
+  const RESUME_OPTIONS = [
+    { value: "", label: "Select resume..." },
+    ...resumeVariants.map((v) => ({ value: v, label: formatResumeLabel(v) })),
+  ];
   const [form, setForm] = useState({
     title: "",
     employer: "",
