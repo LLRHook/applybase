@@ -1,0 +1,29 @@
+# Don't copy host build cruft into the container — `npm ci` already set up
+# a clean node_modules with the correct workspace symlinks.
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+.cache
+.vite
+*.tsbuildinfo
+
+# Local runtime data
+data/*.db
+data/*.db-journal
+data/*.db-wal
+
+# Environment files (templates are committed via .env.example)
+.env
+.env.local
+.env.*.local
+
+# Editor / OS cruft
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+.git
+.gitignore

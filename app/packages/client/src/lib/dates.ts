@@ -39,6 +39,19 @@ export function shortDate(dateStr: string): string {
  *   < 7 days       → "Nd"
  *   >= 7 days      → "Nw"
  */
+/**
+ * Whole days between `dateStr` and now. Negative results clamp to 0.
+ * Used by the Kanban board to surface stalled cards.
+ */
+export function daysSince(dateStr: string): number {
+  try {
+    const ms = Date.now() - new Date(toUtc(dateStr)).getTime();
+    return Math.max(0, Math.floor(ms / 86400000));
+  } catch {
+    return 0;
+  }
+}
+
 export function formatDuration(ms: number): string {
   if (!ms || ms < 0) return "—";
   const minutes = ms / 60000;

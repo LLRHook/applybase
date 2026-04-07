@@ -32,7 +32,7 @@ export const jobFiltersSchema = z.object({
   ),
   search: z.string().optional(),
   offset: z.coerce.number().min(0).default(0),
-  limit: z.coerce.number().min(1).max(100).default(20),
+  limit: z.coerce.number().min(1).max(500).default(20),
   sortBy: z
     .enum(["appliedAt", "employer", "updatedAt", "createdAt"])
     .default("createdAt"),

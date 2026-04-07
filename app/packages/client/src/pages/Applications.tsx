@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { jobsApi } from "../api/jobs.api.ts";
 import { cn } from "../lib/utils.ts";
-import { ExternalLink, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
+import { ExternalLink, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Briefcase, List, LayoutGrid } from "lucide-react";
+import { BoardView } from "../components/board/BoardView.tsx";
 import { toast } from "sonner";
 import { relativeDate, shortDate } from "../lib/dates.ts";
 import { StatusBadge } from "../components/ui/StatusBadge.tsx";
@@ -21,6 +22,16 @@ type SortDir = "asc" | "desc";
 
 export function Applications() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = searchParams.get("view") === "board" ? "board" : "list";
+  const setView = (next: "list" | "board") => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "board") params.set("view", "board");
+    else params.delete("view");
+    // replace: true so toggling between views doesn't pollute the back-button
+    // history with a flicker entry per click.
+    setSearchParams(params, { replace: true });
+  };
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("appliedAt");
@@ -120,6 +131,10 @@ export function Applications() {
   const { data: result, isLoading } = useQuery({
     queryKey: ["jobs", "list", statusFilter, search, page],
     queryFn: () => jobsApi.list(params),
+    // BoardView fires its own query; pausing the list query in board mode
+    // avoids a redundant fetch on every toggle. The board mutation invalidates
+    // ["jobs"] so this query will refetch on its own when the user toggles back.
+    enabled: view === "list",
   });
   const jobs = result?.data ?? [];
   const total = result?.total ?? 0;
@@ -185,34 +200,68 @@ export function Applications() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Applications ({total})</h2>
-        <button
-          onClick={() => navigate("/add")}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-        >
-          + Add
-        </button>
+        <h2 className="text-xl font-bold">
+          Applications{view === "list" ? ` (${total})` : ""}
+        </h2>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+            <button
+              onClick={() => setView("list")}
+              aria-pressed={view === "list"}
+              title="List view"
+              className={cn(
+                "p-2 text-sm",
+                view === "list"
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800",
+              )}
+            >
+              <List size={16} />
+            </button>
+            <button
+              onClick={() => setView("board")}
+              aria-pressed={view === "board"}
+              title="Board view (active pipeline only)"
+              className={cn(
+                "p-2 text-sm border-l border-gray-300 dark:border-gray-600",
+                view === "board"
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800",
+              )}
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+          <button
+            onClick={() => navigate("/add")}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            + Add
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 mb-4">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
-        >
-          <option value="">All Active</option>
-          <option value="applied">Applied</option>
-          <option value="screening">Screening</option>
-          <option value="technical">Technical</option>
-          <option value="onsite">Onsite</option>
-          <option value="offer">Offer</option>
-          <option value="accepted">Accepted</option>
-          <option value="rejected">Rejected</option>
-          <option value="withdrawn">Withdrawn</option>
-          <option value="archived">Archived</option>
-          <option value="all">All (incl. archived)</option>
-        </select>
+        {view === "list" && (
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-gray-300 dark:border-gray-600 rounded px-3 py-1.5 text-sm bg-white dark:bg-gray-800 dark:text-gray-100"
+          >
+            <option value="">All Active</option>
+            <option value="applied">Applied</option>
+            <option value="screening">Screening</option>
+            <option value="technical">Technical</option>
+            <option value="onsite">Onsite</option>
+            <option value="offer">Offer</option>
+            <option value="accepted">Accepted</option>
+            <option value="rejected">Rejected</option>
+            <option value="withdrawn">Withdrawn</option>
+            <option value="archived">Archived</option>
+            <option value="all">All (incl. archived)</option>
+          </select>
+        )}
         <input
           type="text"
           value={search}
@@ -222,7 +271,9 @@ export function Applications() {
         />
       </div>
 
-      {isLoading ? (
+      {view === "board" ? (
+        <BoardView search={search} />
+      ) : isLoading ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonRow key={i} />
