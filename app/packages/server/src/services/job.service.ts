@@ -140,6 +140,20 @@ export class JobService {
     await this.db.delete(jobs).where(eq(jobs.id, id));
   }
 
+  /**
+   * Cascade-rename a resume variant across every job that uses it.
+   * Used by Settings when the user edits a variant's label so existing
+   * applications stay tagged with the new name instead of being orphaned.
+   */
+  async renameResumeVariant(from: string, to: string): Promise<{ updated: number }> {
+    if (from === to) return { updated: 0 };
+    const result = await this.db
+      .update(jobs)
+      .set({ resumeUsed: to, updatedAt: new Date().toISOString() })
+      .where(eq(jobs.resumeUsed, from));
+    return { updated: result.rowsAffected ?? 0 };
+  }
+
   async getFollowUps() {
     const today = new Date().toISOString().split("T")[0];
     const activeStatuses = ["applied", "screening", "technical", "onsite"];

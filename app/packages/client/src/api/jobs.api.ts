@@ -17,6 +17,8 @@ export const jobsApi = {
       "/jobs/scrape-url",
       { url },
     ),
+  renameResume: (from: string, to: string) =>
+    apiPost<{ updated: number }>("/jobs/rename-resume", { from, to }),
   followUps: () => apiFetch<any[]>("/jobs/follow-ups"),
   markFollowedUp: (id: number) => apiPost<void>(`/jobs/${id}/follow-up`),
 };

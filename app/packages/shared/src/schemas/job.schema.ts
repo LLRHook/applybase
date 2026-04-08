@@ -75,6 +75,11 @@ export const checkDuplicateSchema = z.object({
   employer: z.string().optional(),
 });
 
+export const renameResumeVariantSchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+});
+
 export const createStageEventSchema = z.object({
   stage: z.string().min(1),
   outcome: z.enum(["pending", "passed", "failed", "withdrawn", "offer_accepted", "offer_declined", "ghosted"]).optional(),

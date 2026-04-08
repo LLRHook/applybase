@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiPatch } from "../api/client.ts";
+import { jobsApi } from "../api/jobs.api.ts";
 import { toast } from "sonner";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Pencil, Check } from "lucide-react";
 import { parseResumeVariants, serializeResumeVariants } from "../lib/resume-variants.ts";
 import { ResumeBadge } from "../components/ui/ResumeBadge.tsx";
+
+// Each editable variant remembers the name it was loaded with so we can
+// detect renames on save and cascade them to existing applications.
+// `original === null` means "added in this session, never persisted".
+type EditableVariant = { name: string; original: string | null };
+
+function normalize(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, "-");
+}
 
 export function SettingsPage() {
   const queryClient = useQueryClient();
@@ -16,47 +26,107 @@ export function SettingsPage() {
 
   const [followUpDays, setFollowUpDays] = useState("7");
   const [dailyTarget, setDailyTarget] = useState("10");
-  const [resumeVariants, setResumeVariants] = useState<string[]>([]);
+  const [variants, setVariants] = useState<EditableVariant[]>([]);
   const [newVariant, setNewVariant] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (settings.follow_up_days) setFollowUpDays(settings.follow_up_days);
     if (settings.daily_application_target) setDailyTarget(settings.daily_application_target);
-    setResumeVariants(parseResumeVariants(settings));
+    setVariants(parseResumeVariants(settings).map((name) => ({ name, original: name })));
   }, [settings]);
 
+  // Auto-focus the inline edit input when entering edit mode
+  useEffect(() => {
+    if (editingIndex !== null) editInputRef.current?.focus();
+  }, [editingIndex]);
+
   const saveMutation = useMutation({
-    mutationFn: (data: Record<string, string>) => apiPatch<any>("/settings", data),
-    onSuccess: () => {
-      toast.success("Settings saved");
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
+    mutationFn: async (payload: { settings: Record<string, string>; renames: Array<{ from: string; to: string }> }) => {
+      // Cascade renames first so any concurrent reader of /api/settings
+      // sees consistent data once the variants list flips to the new names.
+      let totalUpdated = 0;
+      for (const r of payload.renames) {
+        const result = await jobsApi.renameResume(r.from, r.to);
+        totalUpdated += result.updated;
+      }
+      await apiPatch<any>("/settings", payload.settings);
+      return { totalUpdated, renames: payload.renames.length };
     },
-    onError: () => {
-      toast.error("Failed to save settings");
+    onSuccess: ({ totalUpdated, renames }) => {
+      if (renames > 0) {
+        toast.success(
+          `Settings saved · ${renames} variant${renames === 1 ? "" : "s"} renamed (${totalUpdated} application${totalUpdated === 1 ? "" : "s"} updated)`,
+        );
+      } else {
+        toast.success("Settings saved");
+      }
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to save settings");
     },
   });
 
   const handleSave = () => {
+    // Diff against original names to compute the rename cascade
+    const renames = variants
+      .filter((v) => v.original !== null && v.original !== v.name)
+      .map((v) => ({ from: v.original as string, to: v.name }));
+
     saveMutation.mutate({
-      follow_up_days: followUpDays,
-      daily_application_target: dailyTarget,
-      resume_variants: serializeResumeVariants(resumeVariants),
+      settings: {
+        follow_up_days: followUpDays,
+        daily_application_target: dailyTarget,
+        resume_variants: serializeResumeVariants(variants.map((v) => v.name)),
+      },
+      renames,
     });
   };
 
   const addVariant = () => {
-    const v = newVariant.trim().toLowerCase().replace(/\s+/g, "-");
+    const v = normalize(newVariant);
     if (!v) return;
-    if (resumeVariants.includes(v)) {
+    if (variants.some((x) => x.name === v)) {
       toast.error(`"${v}" already exists`);
       return;
     }
-    setResumeVariants([...resumeVariants, v]);
+    setVariants([...variants, { name: v, original: null }]);
     setNewVariant("");
   };
 
-  const removeVariant = (v: string) => {
-    setResumeVariants(resumeVariants.filter((x) => x !== v));
+  const removeVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+    if (editingIndex === index) setEditingIndex(null);
+  };
+
+  const startEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditingValue(variants[index].name);
+  };
+
+  const commitEdit = () => {
+    if (editingIndex === null) return;
+    const next = normalize(editingValue);
+    if (!next) {
+      toast.error("Resume variant name cannot be empty");
+      return;
+    }
+    if (variants.some((v, i) => i !== editingIndex && v.name === next)) {
+      toast.error(`"${next}" already exists`);
+      return;
+    }
+    setVariants(variants.map((v, i) => (i === editingIndex ? { ...v, name: next } : v)));
+    setEditingIndex(null);
+    setEditingValue("");
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+    setEditingValue("");
   };
 
   return (
@@ -93,27 +163,84 @@ export function SettingsPage() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
             The categories you can pick from when logging an application. These
             should match the resume PDFs you've built in <code className="text-xs bg-gray-100 dark:bg-gray-900 px-1 rounded">resume/</code>.
+            Click a variant's pencil icon to rename it — existing applications using the old name are updated automatically.
           </p>
 
-          {resumeVariants.length === 0 ? (
+          {variants.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500 italic mb-3">No resume variants yet. Add one below.</p>
           ) : (
             <div className="flex flex-wrap gap-2 mb-3">
-              {resumeVariants.map((v) => (
-                <div
-                  key={v}
-                  className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded pr-1"
-                >
-                  <ResumeBadge resume={v} />
-                  <button
-                    onClick={() => removeVariant(v)}
-                    className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5"
-                    aria-label={`Remove ${v}`}
+              {variants.map((v, i) => {
+                const isEditing = editingIndex === i;
+                const isRenamed = v.original !== null && v.original !== v.name;
+                return (
+                  <div
+                    key={i}
+                    className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-700/50 rounded pr-1"
                   >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
+                    {isEditing ? (
+                      <>
+                        <input
+                          ref={editInputRef}
+                          type="text"
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              commitEdit();
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelEdit();
+                            }
+                          }}
+                          className="bg-white dark:bg-gray-800 border border-blue-400 rounded px-2 py-0.5 text-xs text-gray-900 dark:text-gray-100 w-32"
+                        />
+                        <button
+                          onClick={commitEdit}
+                          className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 p-0.5"
+                          aria-label="Save rename"
+                        >
+                          <Check size={12} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
+                          aria-label="Cancel edit"
+                        >
+                          <X size={12} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <ResumeBadge resume={v.name} />
+                        {isRenamed && (
+                          <span
+                            className="text-[10px] text-blue-500 dark:text-blue-400 italic"
+                            title={`Originally "${v.original}" — will rename on save`}
+                          >
+                            renamed
+                          </span>
+                        )}
+                        <button
+                          onClick={() => startEdit(i)}
+                          className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-0.5"
+                          aria-label={`Rename ${v.name}`}
+                        >
+                          <Pencil size={11} />
+                        </button>
+                        <button
+                          onClick={() => removeVariant(i)}
+                          className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5"
+                          aria-label={`Remove ${v.name}`}
+                        >
+                          <X size={12} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -139,7 +266,7 @@ export function SettingsPage() {
             </button>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-            Removing a variant won't change applications that already use it — it just hides it from the dropdown going forward.
+            Renaming cascades to applications already using the old name. Removing a variant just hides it from the dropdown going forward — existing applications keep their value.
           </p>
         </div>
 

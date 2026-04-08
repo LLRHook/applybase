@@ -11,6 +11,7 @@ import {
   scrapeUrlSchema,
   checkDuplicateSchema,
   createStageEventSchema,
+  renameResumeVariantSchema,
 } from "@jobsearch/shared";
 
 export function jobsRoutes(db: DrizzleDB) {
@@ -82,6 +83,18 @@ export function jobsRoutes(db: DrizzleDB) {
   });
 
   // Check duplicate
+  // Cascade-rename a resume variant across every job that uses it.
+  // Called by the Settings page when the user edits a variant label so existing
+  // applications stay tagged with the new name.
+  router.post("/rename-resume", validate(renameResumeVariantSchema), async (req, res, next) => {
+    try {
+      const result = await jobService.renameResumeVariant(req.body.from, req.body.to);
+      res.json({ ok: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post("/check-duplicate", validate(checkDuplicateSchema), async (req, res, next) => {
     try {
       const { jobUrl, title, employer } = req.body;
