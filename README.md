@@ -14,7 +14,7 @@ The two pieces are independent. You can use one without the other. Together, the
 
 ---
 
-## The philosophy in one paragraph
+## Why categories
 
 Tailoring a custom resume per application doesn't scale, and sending one generic resume to everyone doesn't convert. The middle path is **categories**: pre-build a small set of resumes (backend, fullstack, AI, lead, whatever fits your search), pick the right category in 30 seconds when you read a JD, send the PDF. Then track what you sent in a local tracker so you know what's pending follow-up, what your response rate looks like by category, and where your time is actually going. That's it. No AI per application, no per-recruiter tailoring, no spreadsheet drift.
 
@@ -50,13 +50,20 @@ npm run dev
 
 Or with Docker: `docker compose up --build` and open http://localhost:44455.
 
-**Two views, one page.** Switch between a sortable/searchable list and a Kanban board with drag-and-drop status changes — the URL persists the view (`?view=board`) so it survives reload. Cards on the board show a "days in stage" badge that turns yellow at 7 days and red at 14 so stalled applications stand out.
+**Two views, one page.** Switch between a sortable, searchable list and a Kanban board with drag-and-drop status changes. The URL persists the view (`?view=board`) so it survives reload. Cards show a "days in stage" badge that turns yellow at 7 days and red at 14, so stalled applications surface without needing a dedicated report.
 
 ![Board view](docs/screenshots/board.png)
 
-**The whole feature set:** Dashboard with KPIs and a weekly applications chart, paginated Applications list with filter/search/sort/bulk-archive, drag-and-drop Kanban board, Application Detail with timeline + Notes + Salary/Offer tabs, Add Application with URL scraping, Analytics (funnel, velocity, source performance, resume effectiveness, calendar heatmap), Settings — including **user-configurable resume variants** so the categories you pick from match the resumes you actually have.
+### What's in the app
 
-All data lives in a local SQLite file at `app/data/jobsearch.db`. Nothing leaves your machine. No accounts, no telemetry, no cloud, no SaaS lock-in.
+- **Dashboard** — KPIs, a weekly applications chart, a follow-ups-due banner
+- **Applications** — paginated list with filter, search, sort, bulk archive — plus the Kanban board view above
+- **Application Detail** — status timeline, Notes tab (company research, talking points, questions, interview notes), Salary/Offer tab (range, offer amount, equity, negotiation notes)
+- **Add Application** — paste a URL, the form auto-scrapes title/company/location from most ATS pages
+- **Analytics** — funnel, weekly velocity, source performance, resume effectiveness, calendar heatmap
+- **Settings** — follow-up period, daily application target, and user-configurable resume variants so the categories you pick from match the resumes you actually built
+
+All data lives in a local SQLite file at `app/data/jobsearch.db`. Nothing leaves the machine. No accounts, no telemetry, no cloud.
 
 ### More screenshots
 
@@ -73,7 +80,7 @@ For setup details, the architecture, and the open roadmap of features that aren'
 
 ---
 
-## Recommended workflow (using both)
+## Recommended workflow
 
 1. **Once, up front** — write 3–5 category resumes in `resume/` and run `./build.sh` to produce the PDFs.
 2. **Per application** — read the JD, decide which category fits (30 seconds), attach that PDF, send.
@@ -85,24 +92,12 @@ That's the entire loop. No AI per application, no per-recruiter tailoring, no ma
 
 ---
 
-## Why two separate pieces and not one big app
+## Requirements
 
-Because they have different operational characteristics:
+- **`resume/`** — a LaTeX distribution with `pdflatex`. Optionally `pdfinfo` from poppler-utils for the build script's page-count enforcement. See [`resume/README.md`](resume/README.md) for OS-specific install commands.
+- **`app/`** — Node 20+ and npm. SQLite is bundled via `@libsql/client`. Docker is optional.
 
-- **`resume/`** is static. Edit a `.tex` file, run a build, get a PDF. No server, no DB, no dependencies beyond LaTeX. Works on a flight. Survives unchanged for years.
-- **`app/`** is dynamic. It needs Node, runs a server, stores state in a DB. It's where the daily action happens.
-
-Coupling them tighter would mean either (a) the resume system depends on the tracker being running, which is annoying, or (b) the tracker has to know about LaTeX, which is out of scope. The clean version is two siblings with one shared philosophy.
-
----
-
-## Install
-
-**`resume/`** needs a LaTeX distribution with `pdflatex`. Optionally `pdfinfo` from poppler-utils for the build script's page-count enforcement. See [`resume/README.md`](resume/README.md) for OS-specific install commands.
-
-**`app/`** needs Node 20+ and npm. SQLite is bundled via `@libsql/client` so you don't install it separately. See [`app/ROADMAP.md`](app/ROADMAP.md) for what's included and what's not.
-
-You can install one without the other. They share nothing at the dependency level.
+The two pieces share nothing at the dependency level, so you can install either one on its own.
 
 ---
 

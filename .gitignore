@@ -37,3 +37,6 @@ Thumbs.db
 
 # Local screenshot helper with hardcoded paths
 docs/shoot.mjs
+
+# Project-scoped Claude Code context — personal notes, not repo content
+/CLAUDE.md
