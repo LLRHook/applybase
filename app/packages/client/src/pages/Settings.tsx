@@ -24,12 +24,22 @@ export function SettingsPage() {
     queryFn: () => apiFetch<Record<string, string>>("/settings"),
   });
 
+  const { data: resumeCounts = {} } = useQuery({
+    queryKey: ["jobs", "resume-counts"],
+    queryFn: () => jobsApi.resumeCounts(),
+  });
+
   const [followUpDays, setFollowUpDays] = useState("7");
   const [dailyTarget, setDailyTarget] = useState("10");
   const [variants, setVariants] = useState<EditableVariant[]>([]);
   const [newVariant, setNewVariant] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
+  // When the user clicks × on a chip that still has applications using it,
+  // stash the pending removal here and render an inline confirmation. null
+  // means no pending removal. Confirming commits the removal to local state;
+  // the actual save still only happens on Save Settings.
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -65,6 +75,9 @@ export function SettingsPage() {
       }
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      // invalidateQueries above already matches this via prefix, but being
+      // explicit makes the intent obvious and survives future key changes.
+      queryClient.invalidateQueries({ queryKey: ["jobs", "resume-counts"] });
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to save settings");
@@ -98,10 +111,26 @@ export function SettingsPage() {
     setNewVariant("");
   };
 
-  const removeVariant = (index: number) => {
+  const requestRemove = (index: number) => {
+    const variant = variants[index];
+    // Only count jobs against the ORIGINAL name — an in-session rename
+    // hasn't been persisted yet, so any jobs still reference the original.
+    const nameOnServer = variant.original ?? variant.name;
+    const usage = resumeCounts[nameOnServer] ?? 0;
+    if (usage > 0) {
+      setPendingRemoveIndex(index);
+    } else {
+      confirmRemove(index);
+    }
+  };
+
+  const confirmRemove = (index: number) => {
     setVariants(variants.filter((_, i) => i !== index));
     if (editingIndex === index) setEditingIndex(null);
+    if (pendingRemoveIndex === index) setPendingRemoveIndex(null);
   };
+
+  const cancelRemove = () => setPendingRemoveIndex(null);
 
   const startEdit = (index: number) => {
     setEditingIndex(index);
@@ -173,6 +202,8 @@ export function SettingsPage() {
               {variants.map((v, i) => {
                 const isEditing = editingIndex === i;
                 const isRenamed = v.original !== null && v.original !== v.name;
+                const nameOnServer = v.original ?? v.name;
+                const usage = resumeCounts[nameOnServer] ?? 0;
                 return (
                   <div
                     key={i}
@@ -214,6 +245,14 @@ export function SettingsPage() {
                     ) : (
                       <>
                         <ResumeBadge resume={v.name} />
+                        {usage > 0 && (
+                          <span
+                            className="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums"
+                            title={`${usage} application${usage === 1 ? "" : "s"} using this variant`}
+                          >
+                            {usage}
+                          </span>
+                        )}
                         {isRenamed && (
                           <span
                             className="text-[10px] text-blue-500 dark:text-blue-400 italic"
@@ -230,7 +269,7 @@ export function SettingsPage() {
                           <Pencil size={11} />
                         </button>
                         <button
-                          onClick={() => removeVariant(i)}
+                          onClick={() => requestRemove(i)}
                           className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5"
                           aria-label={`Remove ${v.name}`}
                         >
@@ -243,6 +282,37 @@ export function SettingsPage() {
               })}
             </div>
           )}
+
+          {/* Inline confirmation when the user tries to remove an in-use variant */}
+          {pendingRemoveIndex !== null && variants[pendingRemoveIndex] && (() => {
+            const v = variants[pendingRemoveIndex];
+            const nameOnServer = v.original ?? v.name;
+            const usage = resumeCounts[nameOnServer] ?? 0;
+            return (
+              <div className="mb-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700/50 rounded-lg p-3 text-sm">
+                <p className="text-yellow-900 dark:text-yellow-200 font-medium mb-1">
+                  {usage} application{usage === 1 ? "" : "s"} still use{usage === 1 ? "s" : ""} "{nameOnServer}".
+                </p>
+                <p className="text-yellow-800 dark:text-yellow-300 mb-3">
+                  Removing it here keeps those applications tagged with "{nameOnServer}", but the variant disappears from the dropdown going forward. To <strong>rename</strong> the variant and have every application updated automatically, cancel and click the <Pencil size={11} className="inline -mt-0.5" /> pencil icon instead.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => confirmRemove(pendingRemoveIndex!)}
+                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium"
+                  >
+                    Remove anyway
+                  </button>
+                  <button
+                    onClick={cancelRemove}
+                    className="px-3 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
 
           <div className="flex gap-2">
             <input
@@ -266,7 +336,7 @@ export function SettingsPage() {
             </button>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-            Renaming cascades to applications already using the old name. Removing a variant just hides it from the dropdown going forward — existing applications keep their value.
+            <strong>Rename</strong> (pencil icon) cascades to every application using the old name. <strong>Remove</strong> (×) only hides the variant from the dropdown — existing applications keep their value and you'd have to update each one manually.
           </p>
         </div>
 

@@ -18,8 +18,7 @@ build/
 .vite/
 
 # Local databases and runtime data
-app/data/*.db
-app/data/*.db-journal
+app/data/*.db*
 app/data/screenshots/
 
 # Environment files (templates are committed via .env.example)

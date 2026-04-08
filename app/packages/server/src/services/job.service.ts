@@ -141,6 +141,24 @@ export class JobService {
   }
 
   /**
+   * Return a map of resume variant → count of jobs using it, so the
+   * Settings page can warn the user before removing a variant that's
+   * still referenced by existing applications. NULL/empty values are
+   * excluded since they're not selectable in the dropdown anyway.
+   */
+  async getResumeCounts(): Promise<Record<string, number>> {
+    const rows = await this.db
+      .select({ resume: jobs.resumeUsed, count: sql<number>`count(*)` })
+      .from(jobs)
+      .groupBy(jobs.resumeUsed);
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      if (r.resume && r.resume.length > 0) out[r.resume] = Number(r.count);
+    }
+    return out;
+  }
+
+  /**
    * Cascade-rename a resume variant across every job that uses it.
    * Used by Settings when the user edits a variant's label so existing
    * applications stay tagged with the new name instead of being orphaned.

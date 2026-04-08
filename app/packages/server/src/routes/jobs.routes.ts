@@ -95,6 +95,16 @@ export function jobsRoutes(db: DrizzleDB) {
     }
   });
 
+  // Count of jobs grouped by resume_used, for the Settings remove-confirmation UI.
+  router.get("/resume-counts", async (_req, res, next) => {
+    try {
+      const counts = await jobService.getResumeCounts();
+      res.json({ ok: true, data: counts });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   router.post("/check-duplicate", validate(checkDuplicateSchema), async (req, res, next) => {
     try {
       const { jobUrl, title, employer } = req.body;
